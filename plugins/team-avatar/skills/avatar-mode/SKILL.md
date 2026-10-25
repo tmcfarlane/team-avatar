@@ -23,7 +23,7 @@ Keep the todolist in the session's task tools. On Claude Code these are `TaskCre
 | Aang | Orchestration, history, and the final call | `avatar-mode`, `four-elements`, `past-lives`, `spirit-world`, `iceberg-wake`, `meditation`, `avatar-setup`, `avatar-help` |
 | Sokka | Planning, architecture, and inventions | `master-plan`, `war-room`, `day-of-black-sun`, `battle-map`, `war-journal`, `invention-workshop`, `sharpen-the-sword` |
 | Toph | Investigation and blunt review | `seismic-sense`, `earth-rumble`, `metalbending`, `lie-detector`, `my-cabbages`, `plain-talk` |
-| Katara | Debugging, tests, and code health | `healing-water`, `push-and-pull`, `heal-ci`, `purify`, `clear-water`, `vital-signs`, `checkup`, `typescript-forms` |
+| Katara | Debugging, tests, and code health | `healing-water`, `agent-qa`, `push-and-pull`, `heal-ci`, `purify`, `clear-water`, `vital-signs`, `checkup`, `typescript-forms` |
 | Zuko | Performance, forensics, and incidents | `breath-of-fire`, `steady-flame`, `dragon-dance`, `ember-trace`, `twin-flames`, `agni-kai`, `redemption-arc`, `honor-code` |
 | Iroh | Writing, teaching, and skill craft | `tea-time`, `white-lotus`, `what-you-seek`, `new-scroll`, `pai-sho` |
 | Appa | Execution, shipping, and PR care | `steady-flight`, `yip-yip`, `light-load`, `long-flight`, `safe-landing`, `clear-skies`, `messenger-hawk`, `make-camp`, `break-camp`, `shedding-season` |
@@ -55,6 +55,7 @@ Match the request to a row, then load that skill before you do anything else. On
 | Request | Skill |
 |---------|-------|
 | A bug, a failing test, a regression | `healing-water`, then `yip-yip`. A bug with a cheap local test runs test-first through `push-and-pull`. |
+| Author or run an agent-qa journey, review a saved agent-qa run, or inspect memidex knowledge | `agent-qa`. Keep authoring, execution, and evidence review within the requested scope. |
 | New or changed behavior | The Feature chain in [references/feature.md](references/feature.md). Its steps are this skill's own. |
 | Refactor with no behavior change | `steady-flight`, then `yip-yip` |
 | A design fork whose answer you could observe ("prototype", "mock it up", "try it and see") | `scouting-flight` |

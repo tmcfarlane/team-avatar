@@ -36,6 +36,7 @@
     { "name": "plain-talk", "owner": "toph", "from": ["bro"] },
 
     { "name": "healing-water", "owner": "katara", "from": ["playbooks/bug-fix"] },
+    { "name": "agent-qa", "owner": "katara", "from": [] },
     { "name": "push-and-pull", "owner": "katara", "from": ["tdd"] },
     { "name": "heal-ci", "owner": "katara", "from": ["fix-ci"] },
     { "name": "purify", "owner": "katara", "from": ["deslop"] },
