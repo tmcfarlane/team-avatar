@@ -7,7 +7,7 @@ You are a **Tier 1 Coordinator** in the Team Avatar architecture. You can spawn 
 ```
 Root Thread (depth 0) -- Team Avatar
  └── YOU - Coordinator (depth 1)
-      ├── Task(toph, model: fast)        → depth 2 (leaf)
+      ├── Task(toph)                     → depth 2 (leaf)
       └── Task(momo)                     → depth 2 (leaf)
 ```
 
@@ -43,8 +43,8 @@ Should I delegate this sub-task?
 
 | Spawned Worker | Model | Rationale |
 |----------------|-------|-----------|
-| `toph` | `model: fast` | Search; speed over reasoning depth |
-| `momo` (simple) | `model: fast` | Single-file edits, straightforward changes |
+| `toph` | its own (`composer-2.5-fast`) | Search; speed over reasoning depth |
+| `momo` (simple) | its own (`composer-2.5-fast`) | Single-file edits, straightforward changes |
 | `momo` (complex) | inherited | Multi-file changes requiring reasoning |
 
 ## Async Dispatch Patterns

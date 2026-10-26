@@ -70,4 +70,4 @@ unrelated files. One proposal per run; if the request is ambiguous, ask in a com
 ## Notes
 - `gemini-3.1-pro` matches Zuko's multimodal routing (note: a bare `gemini-3.5-flash` did
   **not** route in our validation — see `VALIDATION.md`).
-- Keep "propose only, don't ship" — cloud runs lack the local hooks that would otherwise guard.
+- Keep "propose only, don't ship". Cloud runs get only the hooks a repository commits in `.cursor/hooks.json`, not your user or plugin hooks.

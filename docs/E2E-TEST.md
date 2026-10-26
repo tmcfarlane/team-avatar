@@ -56,14 +56,17 @@ Report:
 
 ## Preconditions (verify before testing)
 
-- [ ] **Cursor 3.8 or newer** running, signed into a plan with the Agent + Task tools (Pro).
-      *Note your exact version.* The last build validated end-to-end was **3.8.23** — on anything
-      newer (e.g. **3.9.x**) the suites **are** the re-validation: Suite A catches model-slug
+- [ ] **Cursor 3.27 or newer** running, signed into a plan with the Agent + Task tools (Pro).
+      A Free plan runs only Auto, so Suite A can't pass on it.
+      *Note your exact version.* The last build validated end-to-end was **3.9.8**. On anything
+      newer (e.g. **3.27**) the suites **are** the re-validation: Suite A catches model-slug
       changes, Suite B catches hook-schema changes. A newer version is **not** a precondition
       failure — proceed and let the suites tell you whether the new build broke anything.
 - [ ] oh-my-cursor installed **project-scoped** in this repo: `.cursor/agents/*.md`,
       `.cursor/rules/orchestrator.mdc`, `.cursor/hooks.json`, `.cursor/hooks/*.sh`,
       `.cursor/permissions.json` (or repo-root `permissions.json`) all present.
+      Or installed as the local plugin: **Customize** lists `team-avatar` with its rule,
+      8 agents, 9 commands, 21 skills, and 2 hooks.
 - [ ] **Cursor was fully restarted (Cmd+Q) after install** — hooks only register on a cold
       start. You **cannot** confirm registration *before* running a command, so a missing
       `.cursor/hooks/last-invocation.log` is **not** a precondition failure — Suite B is the
@@ -82,8 +85,9 @@ Report:
 
 ## Suite A — Per-agent model routing
 
-**Goal:** every agent routes to its configured model. A wrong slug silently falls back to
-`composer-2.5-fast`, so a FAIL here usually shows the wrong agent running Composer.
+**Goal:** every agent routes to its configured model. On Cursor 3.27, a pinned model that
+can't run falls back to another model, and the task card shows which model ran. A FAIL here
+usually shows a different model on an Opus or Gemini agent.
 
 | Agent | Persona | Expected model (Cursor UI badge) |
 | ----- | ------- | -------------------------------- |
@@ -92,9 +96,9 @@ Report:
 | katara | surgical fixer | `composer-2.5-fast` |
 | momo | quick scout | `composer-2.5-fast` |
 | toph | runner | `composer-2.5-fast` |
-| sokka | planner | `claude-opus-4-8-thinking-high` |
-| iroh | reviewer/mentor | `claude-opus-4-8-thinking-high` |
-| zuko | visual/design | `gemini-3.1-pro` |
+| sokka | planner | `claude-opus-5-5-high` |
+| iroh | reviewer/mentor | `claude-opus-5-5-high` |
+| zuko | visual/design | `gemini-4-argon` |
 
 ### Codex steps — A
 
@@ -120,8 +124,8 @@ Dispatch the <AGENT_NAME> agent with the task: reply "<AGENT_NAME> ok". Nothing 
 …and read the model badge on that single sub-run.
 
 **PASS:** all 8 badges match the Expected column.
-**FAIL:** any agent shows a different model (most commonly an Opus/Gemini agent showing
-`composer-2.5-fast`, which means its slug stopped resolving).
+**FAIL:** any agent shows a different model (most commonly an Opus or Gemini agent, which
+means its model ID didn't resolve or your plan can't run it).
 
 ---
 
@@ -177,7 +181,7 @@ written. `.cursor/hooks/last-invocation.log` only exists if Cursor was launched 
 hook visibly ran (or any B1–B3 canary was denied).
 
 **Note on the message:** Cursor surfaces a generic "blocked by a hook" string, not our
-`userMessage`. Treat *blocked* as PASS regardless of the exact wording.
+`user_message`. Treat *blocked* as PASS regardless of the exact wording.
 
 ---
 
@@ -264,6 +268,16 @@ result. No `src/omc-e2e-canary.ts` was created; no cleanup needed.
 - FAIL: B3 commit anti-pattern guard did not block `as any`; `git commit -m "omc e2e canary"` succeeded as `b6e58a1` on `omc-e2e-sandbox`.
 - FAIL: C2 credential-read policy did not hold `cat ~/.ssh/config` for review; Cursor auto-ran it and the command exited 1 because the file did not exist.
 
+### Run 3 (2026-10-26): Cursor 3.27.12 and CLI 2026.10.22, partial
+Driven through `cursor-agent -p --plugin-dir ~/.cursor/plugins/local/team-avatar` on a Free plan,
+plus the desktop app's Customize view. Full results are in `VALIDATION.md`.
+- A: all 8 agents ran, but a Free plan runs only Auto, so no pinned model could be checked. With
+  the Claude Code edition also installed, its agents ran in place of this edition's.
+- B: B1 and B2 were blocked. B3 committed `as any` until two guard fixes, after which both the
+  combined stage-and-commit and the separate commit were blocked.
+- C: not checkable through the CLI, which rejects every shell command that is not on its own
+  allowlist in print mode.
+
 ---
 
 ## Cleanup
@@ -280,12 +294,14 @@ rm -f .cursor/hooks/last-invocation.log
 
 ## Interpreting failures
 
-- **An Opus/Gemini agent shows `composer-2.5-fast`** → its model slug stopped resolving;
-  re-check the agent's frontmatter against the valid-slug table in `VALIDATION.md`.
+- **An Opus or Gemini agent shows a different model** → its model ID didn't resolve or your
+  plan can't run it. Read the subagent's task card or result, then check the agent's frontmatter
+  against the model IDs in `VALIDATION.md`.
 - **A destructive canary ran instead of being blocked** → the shell guard isn't registered.
-  Most likely: Cursor wasn't cold-restarted after install, the hook is user-scoped instead of
-  project-scoped, or `python3`/`jq` aren't on the GUI app's PATH (the guard has a perl
-  fallback, but verify `.cursor/hooks/last-invocation.log` shows invocations).
+  Most likely: Cursor wasn't cold-restarted after install, Customize doesn't list the plugin's
+  hooks (plugin install) or `.cursor/hooks.json` is missing (`--project` install), or
+  `python3`/`jq` aren't on the GUI app's PATH (the guard has a perl fallback, but verify that
+  `hooks/last-invocation.log` beside the guard shows invocations).
 - **The `as any` commit landed** → `pre-commit-check.sh` isn't executable, or the guard's
   `git commit` branch didn't run; confirm `chmod +x .cursor/hooks/*.sh`.
 - **A risky call auto-ran with no prompt** → auto-review isn't reading `permissions.json`;

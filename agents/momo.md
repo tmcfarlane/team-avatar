@@ -1,5 +1,5 @@
 ---
-name: momo is doing some quick code changes
+name: momo
 description: Quick focused task executor for bounded implementation work. Always use for single-domain tasks with clear scope, focused code changes, and research queries. Use proactively for straightforward implementation that doesn't need deep reasoning.
 model: composer-2.5-fast
 ---

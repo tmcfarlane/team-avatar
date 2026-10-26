@@ -43,6 +43,9 @@ fi
 [ -z "$FILE" ] && exit 0
 [ -f "$FILE" ] || exit 0
 
+# Plugin and user hooks start outside the project, so lint from the workspace root.
+if [ -n "${CURSOR_PROJECT_DIR:-}" ] && [ -d "$CURSOR_PROJECT_DIR" ]; then cd "$CURSOR_PROJECT_DIR" 2>/dev/null || true; fi
+
 ext="${FILE##*.}"
 
 case "$ext" in
