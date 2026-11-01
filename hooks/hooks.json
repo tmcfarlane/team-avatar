@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "hooks": {
+    "beforeShellExecution": [
+      { "command": "./hooks/guard-shell.sh", "failClosed": true }
+    ],
+    "afterFileEdit": [
+      { "command": "./hooks/post-edit-lint.sh" }
+    ]
+  }
+}

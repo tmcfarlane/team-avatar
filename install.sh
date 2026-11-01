@@ -3,8 +3,8 @@
 
 set -euo pipefail
 
-VERSION="0.4.2"
-CURSOR_MODE_LABEL="Team Avatar (Cursor 3.4+)"
+VERSION="0.5.0"
+CURSOR_MODE_LABEL="Team Avatar (Cursor 3.27+)"
 
 AGENT_FILES=(aang.md sokka.md katara.md zuko.md toph.md appa.md momo.md iroh.md)
 PROTOCOL_FILES=(protocols/team-avatar.md)
@@ -12,9 +12,13 @@ COMMAND_FILES=(plan.md build.md search.md fix.md tasks.md scout.md cactus-juice.
 HOOK_FILES=(post-edit-lint.sh pre-commit-check.sh guard-shell.sh)
 CONFIG_FILES=(hooks.json permissions.json)
 RULE_FILE="orchestrator.mdc"
+PLUGIN_NAME="team-avatar"
+PLUGIN_MANIFEST=".cursor-plugin/plugin.json"
+PLUGIN_HOOKS_CONFIG="hooks.json"
 SKILL_DIRS=(
   architect
   codebase-search
+  crafting-effective-readmes
   create-an-asset
   cursor-image-generation
   debugging
@@ -50,6 +54,9 @@ ALSO_CODEX=false
 WITH_SKILLS=true
 
 WORK_DIR=""
+PLUGIN_DIR=""
+BACKUP_DIR=""
+OLD_LAYOUT_MOVED=0
 
 BOLD="" DIM="" GREEN="" RED="" YELLOW="" RESET=""
 
@@ -96,13 +103,17 @@ ${DIM}${CURSOR_MODE_LABEL}${RESET}
 
 Install Team Avatar agent configurations for Cursor.
 
+User scope installs a local Cursor plugin at ~/.cursor/plugins/local/team-avatar/.
+Restart Cursor afterwards. On Cursor Enterprise, an admin must turn on
+"Allow Local Plugin Imports". Project scope installs files into ./.cursor/.
+
 ${BOLD}USAGE${RESET}
   curl -fsSL https://raw.githubusercontent.com/tmcfarlane/team-avatar/main/install.sh | bash
   curl -fsSL https://raw.githubusercontent.com/tmcfarlane/team-avatar/main/install.sh | bash -s -- [OPTIONS]
   bash install.sh [OPTIONS]
 
 ${BOLD}OPTIONS${RESET}
-  --user          Install to user scope (~/.cursor/) [default]
+  --user          Install the local plugin to ~/.cursor/plugins/local/team-avatar/ [default]
   --project       Install to project scope (./.cursor/)
   --claude        Also install to .claude/agents/ for Claude Code compatibility
   --codex         Also install to .codex/agents/ for Codex compatibility
@@ -110,7 +121,7 @@ ${BOLD}OPTIONS${RESET}
   -f, --force     Overwrite existing files
   -n, --dry-run   Show what would be done without making changes
   -v, --verbose   Enable verbose output
-  --uninstall     Remove installed agent and rule files
+  --uninstall     Remove the installed plugin (user) or agent and rule files (project)
   --disable       Disable orchestration (rename rule so Cursor stops applying it)
   --enable        Re-enable orchestration (rename rule back)
   -h, --help      Show this help message
@@ -160,16 +171,20 @@ parse_args() {
 }
 
 resolve_dirs() {
+  local target_dir
   if [ "$SCOPE" = "user" ]; then
     CURSOR_DIR="${HOME}/.cursor"
+    PLUGIN_DIR="${CURSOR_DIR}/plugins/local/${PLUGIN_NAME}"
+    target_dir="$PLUGIN_DIR"
   else
     CURSOR_DIR="./.cursor"
+    target_dir="$CURSOR_DIR"
   fi
-  AGENTS_DIR="${CURSOR_DIR}/agents"
-  RULES_DIR="${CURSOR_DIR}/rules"
-  COMMANDS_DIR="${CURSOR_DIR}/commands"
-  HOOKS_DIR="${CURSOR_DIR}/hooks"
-  SKILLS_DIR="${CURSOR_DIR}/skills"
+  AGENTS_DIR="${target_dir}/agents"
+  RULES_DIR="${target_dir}/rules"
+  COMMANDS_DIR="${target_dir}/commands"
+  HOOKS_DIR="${target_dir}/hooks"
+  SKILLS_DIR="${target_dir}/skills"
 }
 
 RULE_FILE_DISABLED="${RULE_FILE}.disabled"
@@ -267,7 +282,11 @@ copy_sources_from_local_repo() {
     for file in "${HOOK_FILES[@]}"; do
       cp "${script_dir}/hooks/${file}" "${out_dir}/hooks/${file}" || return 1
     done
+    cp "${script_dir}/hooks/${PLUGIN_HOOKS_CONFIG}" "${out_dir}/hooks/${PLUGIN_HOOKS_CONFIG}" || return 1
   fi
+
+  mkdir -p "${out_dir}/$(dirname "$PLUGIN_MANIFEST")"
+  cp "${script_dir}/${PLUGIN_MANIFEST}" "${out_dir}/${PLUGIN_MANIFEST}" || return 1
 
   if [ -d "${script_dir}/skills" ]; then
     cp -r "${script_dir}/skills" "${out_dir}/skills" || return 1
@@ -318,6 +337,10 @@ download_sources_from_github() {
     url="${base}/hooks/${file}"
     curl -fsSL "$url" -o "${out_dir}/hooks/${file}" || return 1
   done
+  curl -fsSL "${base}/hooks/${PLUGIN_HOOKS_CONFIG}" -o "${out_dir}/hooks/${PLUGIN_HOOKS_CONFIG}" || return 1
+
+  mkdir -p "${out_dir}/$(dirname "$PLUGIN_MANIFEST")"
+  curl -fsSL "${base}/${PLUGIN_MANIFEST}" -o "${out_dir}/${PLUGIN_MANIFEST}" || return 1
 
   for file in "${CONFIG_FILES[@]}"; do
     curl -fsSL "${base}/${file}" -o "${out_dir}/${file}" || return 1
@@ -566,15 +589,175 @@ install_to_dir() {
 }
 
 # ---------------------------------------------------------------------------
+# User-scope plugin: move the old ~/.cursor/ layout aside, install permissions.json
+# ---------------------------------------------------------------------------
+
+backup_old_file() {
+  local rel="$1"
+  local src="${CURSOR_DIR}/${rel}"
+  local dest="${BACKUP_DIR}/${rel}"
+
+  if [ "$DRY_RUN" = true ]; then
+    log "  ${YELLOW}[would move]${RESET} ${src}"
+  else
+    mkdir -p "$(dirname "$dest")"
+    mv "$src" "$dest"
+    log "  ${YELLOW}[moved]${RESET} ${src} -> ${dest}"
+  fi
+  OLD_LAYOUT_MOVED=$((OLD_LAYOUT_MOVED + 1))
+}
+
+# A SKILL.md's description line plus the indented lines that continue it.
+skill_description() { awk '/^description:/ {on=1; print; next} on && /^[ \t]/ {print; next} on {exit}' "$1" 2>/dev/null || true; }
+
+# Earlier installers wrote straight into ~/.cursor/. Cursor 3.27 reads Team Avatar from the plugin,
+# so those copies are moved (never deleted) into a backup folder. A file moves only when it is clearly ours.
+backup_old_user_layout() {
+  BACKUP_DIR="${CURSOR_DIR}/team-avatar-backup-$(date +%Y%m%d-%H%M%S)"
+  OLD_LAYOUT_MOVED=0
+
+  local file name rel skill line
+  # Every shipped command names its character as a whole word. cactus-juice.md names none, so
+  # its own phrase marks it as ours.
+  local characters='aang|sokka|katara|zuko|toph|appa|momo|iroh|cactus juice'
+
+  for file in "${AGENT_FILES[@]}"; do
+    name="${file%.md}"
+    rel="agents/${file}"
+    if [ -f "${CURSOR_DIR}/${rel}" ]; then
+      line="$(sed -n 2p "${CURSOR_DIR}/${rel}")"
+      # Ours: a name an earlier release shipped, such as "name: toph", "name: toph is exploring
+      # files and docs by vibration", or "name: aang - Executes & Debugs Code".
+      if [ "$line" = "name: ${name}" ] || [[ "$line" == "name: ${name} is "* ]] || [[ "$line" == "name: ${name} - "* ]]; then
+        backup_old_file "$rel"
+      fi
+    fi
+  done
+
+  for file in "${PROTOCOL_FILES[@]}" "${LEGACY_PROTOCOL_FILES[@]}"; do
+    rel="agents/${file}"
+    if [ -f "${CURSOR_DIR}/${rel}" ] && [[ "$(head -n 1 "${CURSOR_DIR}/${rel}")" == "# "*"Coordinator Protocol"* ]]; then
+      backup_old_file "$rel"
+    fi
+  done
+
+  for file in "$RULE_FILE" "$RULE_FILE_DISABLED"; do
+    rel="rules/${file}"
+    if [ -f "${CURSOR_DIR}/${rel}" ] && grep -q "Team Avatar orchestration" "${CURSOR_DIR}/${rel}"; then
+      backup_old_file "$rel"
+    fi
+  done
+
+  for file in "${COMMAND_FILES[@]}"; do
+    rel="commands/${file}"
+    if [ -f "${CURSOR_DIR}/${rel}" ] && grep -qiwE "$characters" "${CURSOR_DIR}/${rel}"; then
+      backup_old_file "$rel"
+    fi
+  done
+
+  # A user's own ~/.cursor/hooks.json may run scripts with these names, so leave them when it exists.
+  if [ ! -e "${CURSOR_DIR}/hooks.json" ]; then
+    for file in "${HOOK_FILES[@]}"; do
+      rel="hooks/${file}"
+      [ -f "${CURSOR_DIR}/${rel}" ] || continue
+      # Ours: the second line an earlier release shipped for that script.
+      case "${file}:$(sed -n 2p "${CURSOR_DIR}/${rel}")" in
+        "guard-shell.sh:# beforeShellExecution hook"* | "post-edit-lint.sh:# afterFileEdit hook"* | "post-edit-lint.sh:# Post-edit hook:"* | "pre-commit-check.sh:# Pre-commit hook:"*)
+          backup_old_file "$rel" ;;
+      esac
+    done
+  fi
+
+  local skills_dir="${CURSOR_DIR}/skills"
+  local old_skills=("${SKILL_DIRS[@]}")
+  if [ -f "${skills_dir}/MANIFEST" ]; then
+    while IFS= read -r line || [ -n "$line" ]; do
+      [ -z "$line" ] && continue
+      old_skills+=("${line%%/*}")
+    done < "${skills_dir}/MANIFEST"
+  fi
+  # A skill folder is ours only when its description matches the bundled copy, so a user's own
+  # skill that shares a bundled name stays where it is. With --no-skills the plugin gets no
+  # skills, so the old folders stay in use.
+  local ours theirs seen=" "
+  for skill in "${old_skills[@]}"; do
+    case "$seen" in *" ${skill} "*) continue ;; esac
+    seen="${seen}${skill} "
+    rel="skills/${skill}"
+    [ -d "${CURSOR_DIR}/${rel}" ] || continue
+    if [ "$WITH_SKILLS" != true ]; then
+      log "  ${DIM}[left]${RESET} ~/.cursor/${rel}"
+      continue
+    fi
+    ours="$(skill_description "${WORK_DIR}/skills/${skill}/SKILL.md")"
+    theirs="$(skill_description "${CURSOR_DIR}/${rel}/SKILL.md")"
+    if [ -n "$ours" ] && [ "$ours" = "$theirs" ]; then
+      backup_old_file "$rel"
+    else
+      log "  ${DIM}[left]${RESET} ~/.cursor/${rel} (not the bundled copy)"
+    fi
+  done
+  if [ -f "${skills_dir}/MANIFEST" ]; then
+    backup_old_file "skills/MANIFEST"
+  fi
+
+  if [ "$OLD_LAYOUT_MOVED" -gt 0 ]; then
+    log ""
+    if [ "$DRY_RUN" = true ]; then
+      log "  ${YELLOW}Old Team Avatar files in ${CURSOR_DIR} would move to ${BACKUP_DIR}${RESET}"
+    else
+      log "  ${YELLOW}Old Team Avatar files in ${CURSOR_DIR} are now in ${BACKUP_DIR}${RESET}"
+    fi
+    log ""
+  fi
+}
+
+# permissions.json is a user-level file. Create it when missing and leave an existing different one alone.
+install_user_permissions() {
+  local src="${WORK_DIR}/permissions.json"
+  local dest="${CURSOR_DIR}/permissions.json"
+
+  [ -f "$src" ] || return 0
+  if [ -f "$dest" ] && ! cmp -s "$src" "$dest"; then
+    log "${YELLOW}Left ${dest} unchanged: it differs from the Team Avatar permissions.json.${RESET}"
+    log ""
+    return 0
+  fi
+  install_file_set "$WORK_DIR" "$CURSOR_DIR" "permissions" permissions.json
+}
+
+install_plugin_files() {
+  install_file_set "$WORK_DIR" "$PLUGIN_DIR" "plugin manifest" "$PLUGIN_MANIFEST"
+  install_file_set "${WORK_DIR}/hooks" "${PLUGIN_DIR}/hooks" "plugin hook config" "$PLUGIN_HOOKS_CONFIG"
+  if [ "$DRY_RUN" = false ]; then
+    local file
+    for file in "${HOOK_FILES[@]}"; do
+      if [ -f "${PLUGIN_DIR}/hooks/${file}" ]; then
+        chmod +x "${PLUGIN_DIR}/hooks/${file}"
+      fi
+    done
+  fi
+  install_user_permissions
+}
+
+# ---------------------------------------------------------------------------
 # Main install logic
 # ---------------------------------------------------------------------------
 
 install_agents() {
   local src_dir="$1"
 
-  log "Installing to ${BOLD}${CURSOR_DIR}${RESET}"
-  log ""
-  install_to_dir "$CURSOR_DIR"
+  if [ "$SCOPE" = "user" ]; then
+    backup_old_user_layout
+    log "Installing local plugin to ${BOLD}${PLUGIN_DIR}${RESET}"
+    log ""
+    install_to_dir "$PLUGIN_DIR"
+    install_plugin_files
+  else
+    log "Installing to ${BOLD}${CURSOR_DIR}${RESET}"
+    log ""
+    install_to_dir "$CURSOR_DIR"
+  fi
 
   if [ "$ALSO_CLAUDE" = true ]; then
     local claude_dir
@@ -609,11 +792,18 @@ install_agents() {
   fi
   log ""
 
-  if [ "$SCOPE" = "user" ]; then
-    local rule_path="${RULES_DIR}/${RULE_FILE}"
-    log "  ${YELLOW}Note: Cursor requires manual approval for file-based user rules.${RESET}"
-    log "  ${YELLOW}Open ${rule_path} in Cursor and click \"Always Allow\" to activate the orchestrator.${RESET}"
+  if [ "$SCOPE" = "user" ] && [ "$DRY_RUN" = false ]; then
+    log "  ${YELLOW}Restart Cursor or run Developer: Reload Window. Then open Customize and check that the${RESET}"
+    log "  ${YELLOW}${PLUGIN_NAME} plugin shows its rules, agents, commands, skills, and hooks.${RESET}"
     log ""
+    # Cursor also loads Claude Code plugins, and the Claude Code edition's agents take over these names.
+    if grep -qs '"team-avatar@' "${HOME}/.claude/plugins/installed_plugins.json"; then
+      log "  ${YELLOW}The Claude Code edition of Team Avatar is installed too. Cursor loads Claude Code${RESET}"
+      log "  ${YELLOW}plugins, and that edition's agents take over the same names, so these agents don't run.${RESET}"
+      log "  ${YELLOW}To use this edition in Cursor, turn off Include Third-Party Plugins, Skills, and Other${RESET}"
+      log "  ${YELLOW}Configs in Cursor Settings, or uninstall one edition.${RESET}"
+      log ""
+    fi
   fi
 }
 
@@ -780,6 +970,42 @@ uninstall_agents() {
   fi
 }
 
+uninstall_plugin() {
+  log "${BOLD}oh-my-cursor${RESET} v${VERSION}"
+  log "${DIM}${CURSOR_MODE_LABEL}${RESET}"
+  log ""
+
+  if [ "$DRY_RUN" = true ]; then
+    log "${YELLOW}Dry run mode -- no changes will be made${RESET}"
+    log ""
+  fi
+
+  log "Removing plugin ${BOLD}${PLUGIN_DIR}${RESET}"
+  log ""
+
+  local removed=0
+  if [ -d "$PLUGIN_DIR" ]; then
+    if [ "$DRY_RUN" = true ]; then
+      log "  ${RED}[remove]${RESET} ${PLUGIN_DIR}"
+    else
+      rm -rf "$PLUGIN_DIR"
+      log "  ${RED}[removed]${RESET} ${PLUGIN_DIR}"
+    fi
+    removed=1
+  fi
+  log ""
+
+  backup_old_user_layout
+
+  log "${BOLD}Summary${RESET}"
+  log "  ${DIM}Mode: ${CURSOR_MODE_LABEL}${RESET}"
+  if [ $((removed + OLD_LAYOUT_MOVED)) -gt 0 ]; then
+    log "  ${RED}Removed plugin: ${removed} | Old files backed up: ${OLD_LAYOUT_MOVED}${RESET}"
+  else
+    log "  ${DIM}Nothing to remove${RESET}"
+  fi
+}
+
 # ---------------------------------------------------------------------------
 # Skills installation
 # ---------------------------------------------------------------------------
@@ -840,15 +1066,14 @@ install_skills() {
 
   log ""
 
+  # Cursor also loads user skills from ~/.agents/skills/, so a skill there with a bundled name shows twice.
   if [ -d "${HOME}/.agents/skills" ]; then
-    local legacy_count=0
+    local same=""
     for skill in "${SKILL_DIRS[@]}"; do
-      [ -d "${HOME}/.agents/skills/${skill}" ] && legacy_count=$((legacy_count + 1))
+      [ -d "${HOME}/.agents/skills/${skill}" ] && same="${same} ${skill}"
     done
-    if [ "$legacy_count" -gt 0 ]; then
-      log "${DIM}Note: ${legacy_count} matching skill(s) found in ~/.agents/skills/ (legacy location).${RESET}"
-      log "${DIM}They show as 'Rules' in Cursor UI. The new installs in ~/.cursor/skills/ show as 'Skills'.${RESET}"
-      log "${DIM}You can safely delete ~/.agents/skills/ once verified.${RESET}"
+    if [ -n "$same" ]; then
+      log "${DIM}Note: ~/.agents/skills/ has skills with bundled names:${same}. Cursor loads both copies.${RESET}"
       log ""
     fi
   fi
@@ -874,7 +1099,18 @@ main() {
   fi
 
   if [ "$UNINSTALL" = true ]; then
-    uninstall_agents
+    if [ "$SCOPE" = "user" ]; then
+      # The source copy tells the old bundled skills apart from a user's own same-named ones.
+      # Uninstall still works offline. Old skill folders then stay where they are.
+      WORK_DIR=$(mktemp -d)
+      if ! copy_sources_from_local_repo "$WORK_DIR" && ! download_sources_from_github "$WORK_DIR" 2>/dev/null; then
+        log "${YELLOW}Could not read the bundled skills, so old skill folders stay where they are.${RESET}"
+        log ""
+      fi
+      uninstall_plugin
+    else
+      uninstall_agents
+    fi
     return 0
   fi
 
@@ -890,7 +1126,7 @@ main() {
   fi
 
   log_verbose "Scope: ${SCOPE}"
-  log_verbose "Target: ${CURSOR_DIR}"
+  log_verbose "Target: ${PLUGIN_DIR:-$CURSOR_DIR}"
   log_verbose "Force: ${FORCE}"
 
   create_source_files "$WORK_DIR"

@@ -1,5 +1,5 @@
 ---
-name: Refactoring
+name: refactoring
 description: This skill should be used when the user asks to "refactor code", "rename function", "extract method", "reduce complexity", "migrate code", "code migration", "modernize code", "split class", "move code", or mentions code restructuring and refactoring operations.
 version: 1.0.0
 ---
