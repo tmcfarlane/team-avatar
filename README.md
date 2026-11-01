@@ -23,6 +23,42 @@ https://github.com/user-attachments/assets/61db75bb-73e7-46d8-8863-fe9bbb8fad8c
 
 <sub>App screens are recreated from this repository's real runs and files. Narration is an AI clone of the author's voice.</sub>
 
+## Install
+
+Claude Code:
+
+```bash
+claude plugin marketplace add tmcfarlane/team-avatar && claude plugin install team-avatar@team-avatar
+```
+
+Codex:
+
+```bash
+codex plugin marketplace add tmcfarlane/team-avatar && codex plugin add team-avatar@team-avatar
+```
+
+Codex starts character subagents only when `multi_agent = true` is set under `[features]` in `~/.codex/config.toml`.
+
+Then ask for `avatar-mode` (`/team-avatar:avatar-mode` in Claude Code, `$avatar-mode` in Codex) with any engineering task. [plugins/team-avatar](plugins/team-avatar/README.md) has the full roster and every skill.
+
+Each character runs on the model named in your model sheet, and `avatar-setup` writes that sheet. On Codex, run `$avatar-setup` once. The built-in defaults name Claude models, which Codex can't run. [Pick the models](plugins/team-avatar/README.md#pick-the-models) lists the defaults.
+
+### Try your first task
+
+Open a repository and ask Team Avatar to explain its structure and test setup. This first task is read-only.
+
+Claude Code:
+
+```text
+/team-avatar:avatar-mode Explain this repository's structure and how to run its tests. Cite the relevant files. Do not change any files.
+```
+
+Codex:
+
+```text
+$avatar-mode Explain this repository's structure and how to run its tests. Cite the relevant files. Do not change any files.
+```
+
 ## Origin story
 
 Team Avatar started in Cursor as oh-my-cursor. I upgraded to Cursor Ultra with 9 days left to burn about $300 in tokens, and built agent swarms to do real work while responsibly (irresponsibly) optimizing token burn. Turns out all it takes is Markdown config files and one orchestration rule. That edition still ships, and [Team Avatar for Cursor](#team-avatar-for-cursor-the-original-oh-my-cursor) covers it.
@@ -69,26 +105,6 @@ The finished activity log shows the investigation, the fix, and the two reviews.
 
 <img src="docs/evidence/desktop-apps/codex-app-activity.png" alt="The Codex app's expanded activity log for the run" width="820">
 
-
-## Install
-
-Claude Code:
-
-```bash
-claude plugin marketplace add tmcfarlane/team-avatar && claude plugin install team-avatar@team-avatar
-```
-
-Codex:
-
-```bash
-codex plugin marketplace add tmcfarlane/team-avatar && codex plugin add team-avatar@team-avatar
-```
-
-Codex starts character subagents only when `multi_agent = true` is set under `[features]` in `~/.codex/config.toml`.
-
-Then ask for `avatar-mode` (`/team-avatar:avatar-mode` in Claude Code, `$avatar-mode` in Codex) with any engineering task. [plugins/team-avatar](plugins/team-avatar/README.md) has the full roster and every skill.
-
-Each character runs on the model named in your model sheet, and `avatar-setup` writes that sheet. On Codex, run `$avatar-setup` once. The built-in defaults name Claude models, which Codex can't run. [Pick the models](plugins/team-avatar/README.md#pick-the-models) lists the defaults.
 
 ## Other harnesses
 
