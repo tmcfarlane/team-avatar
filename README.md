@@ -45,18 +45,18 @@ Each character runs on the model named in your model sheet, and `avatar-setup` w
 
 ### Try your first task
 
-Open a repository with uncommitted changes and ask Team Avatar to review the diff.
+Open a repository and ask Team Avatar to explain its structure and test setup. This first task is read-only.
 
 Claude Code:
 
 ```text
-/team-avatar:avatar-mode Review the current diff for correctness bugs. Report each finding with its file and line.
+/team-avatar:avatar-mode Explain this repository's structure and how to run its tests. Cite the relevant files. Do not change any files.
 ```
 
 Codex:
 
 ```text
-$avatar-mode Review the current diff for correctness bugs. Report each finding with its file and line.
+$avatar-mode Explain this repository's structure and how to run its tests. Cite the relevant files. Do not change any files.
 ```
 
 ## Origin story
