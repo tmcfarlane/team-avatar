@@ -1,0 +1,27 @@
+{
+  "name": "team-avatar",
+  "version": "1.1.0",
+  "description": "Team Avatar for Cursor: eight Avatar characters as subagents, an orchestration rule that routes every task, slash commands, safety hooks, and bundled skills.",
+  "author": {
+    "name": "ZeroClickDev"
+  },
+  "homepage": "https://github.com/tmcfarlane/team-avatar",
+  "repository": "https://github.com/tmcfarlane/team-avatar",
+  "license": "MIT",
+  "keywords": ["subagents", "orchestration", "hooks", "skills", "team-avatar"],
+  "logo": "screenshots/teamavatar.png",
+  "agents": [
+    "./agents/aang.md",
+    "./agents/sokka.md",
+    "./agents/katara.md",
+    "./agents/zuko.md",
+    "./agents/toph.md",
+    "./agents/appa.md",
+    "./agents/momo.md",
+    "./agents/iroh.md"
+  ],
+  "rules": "./rules/",
+  "commands": "./commands/",
+  "skills": "./skills/",
+  "hooks": "./hooks/hooks.json"
+}

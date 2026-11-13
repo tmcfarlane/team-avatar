@@ -1,0 +1,60 @@
+name: validate-cursor-edition
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "agents/**"
+      - "commands/**"
+      - "hooks/**"
+      - "rules/**"
+      - "skills/**"
+      - ".cursor-plugin/**"
+      - "hooks.json"
+      - "permissions.json"
+      - "install.sh"
+      - "install.ps1"
+      - "scripts/test-cursor-hooks.sh"
+      - "scripts/test-install-sh.sh"
+      - "scripts/test-install-ps1.ps1"
+      - ".github/workflows/validate-cursor-edition.yml"
+  pull_request:
+    paths:
+      - "agents/**"
+      - "commands/**"
+      - "hooks/**"
+      - "rules/**"
+      - "skills/**"
+      - ".cursor-plugin/**"
+      - "hooks.json"
+      - "permissions.json"
+      - "install.sh"
+      - "install.ps1"
+      - "scripts/test-cursor-hooks.sh"
+      - "scripts/test-install-sh.sh"
+      - "scripts/test-install-ps1.ps1"
+      - ".github/workflows/validate-cursor-edition.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cursor-edition:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The installer suites build the old layout from the v0.4.2 tag.
+          fetch-depth: 0
+      - name: Hook replies match Cursor's schema
+        run: bash scripts/test-cursor-hooks.sh
+      - name: install.sh
+        run: bash scripts/test-install-sh.sh
+      - name: install.ps1
+        run: |
+          legacy="$RUNNER_TEMP/v0.4.2"
+          mkdir -p "$legacy"
+          git archive v0.4.2 | tar -x -C "$legacy"
+          TA_LEGACY_REPO="$legacy" pwsh -NoProfile -File scripts/test-install-ps1.ps1

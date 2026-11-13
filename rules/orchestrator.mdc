@@ -33,7 +33,7 @@ Root (depth 0) — DISPATCHER ONLY
 
 ## Agent Routing
 
-**Model policy:** default **`composer-2.5-fast`** (Composer 2.5, [Auto + Composer pool](https://cursor.com/docs/models-and-pricing.md)); **`claude-opus-4-8-thinking-high`** only for deliberate depth (Sokka, Iroh); **`gemini-3.1-pro`** only for the multimodal stack (Zuko). See [Model Policy](../README.md#model-policy) in the project README.
+**Model policy:** default **`composer-2.5-fast`** (Composer 2.5, [Auto + Composer pool](https://cursor.com/docs/models-and-pricing.md)); **`claude-opus-5-5-high`** only for deliberate depth (Sokka, Iroh); **`gemini-4-argon`** only for the multimodal stack (Zuko). See [Model Policy](../README.md#model-policy) in the project README.
 
 | Agent | Model | Fire When |
 |-------|-------|-----------|
@@ -42,9 +42,9 @@ Root (depth 0) — DISPATCHER ONLY
 | **Appa** | `composer-2.5-fast` | Plan exists → executes plan step-by-step, no improvisation |
 | **Katara** | `composer-2.5-fast` | No plan + needs fixing → surgical fix, smallest possible change |
 | **Aang** | `composer-2.5-fast` | No plan + needs building → decides approach + builds. Also: 2+ failed executor fixes |
-| **Sokka** | `claude-opus-4-8-thinking-high` | Complex planning, ambiguous scope analysis |
-| **Zuko** | `gemini-3.1-pro` | Images, icons, UI mockups, visual design |
-| **Iroh** | `claude-opus-4-8-thinking-high` | README writes, CHANGELOG updates, any documentation task |
+| **Sokka** | `claude-opus-5-5-high` | Complex planning, ambiguous scope analysis |
+| **Zuko** | `gemini-4-argon` | Images, icons, UI mockups, visual design |
+| **Iroh** | `claude-opus-5-5-high` | README writes, CHANGELOG updates, any documentation task |
 
 **There is NO request type where the root does the work itself.**
 

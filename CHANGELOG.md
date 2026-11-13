@@ -3,9 +3,59 @@
 All notable changes to Team Avatar (formerly oh-my-cursor) are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); this project uses [SemVer](https://semver.org/).
 
-> **Validated against Cursor 3.9.8** (latest) — every release is verified on a real
+> **Last validated against Cursor 3.9.8.** Every release is verified on a real
 > Cursor build before tagging. See [`VALIDATION.md`](VALIDATION.md) for the per-version
 > compatibility matrix and the 2-minute re-validation check.
+
+## [Unreleased]
+
+The Cursor edition moves to Cursor 3.27. These changes follow Cursor's docs and a partial live run
+on Cursor 3.27.12, recorded in [`VALIDATION.md`](VALIDATION.md).
+
+### Changed
+
+- `install.sh` and `install.ps1` install the default user scope as a local Cursor plugin in
+  `~/.cursor/plugins/local/team-avatar/`. Cursor no longer reads user rules from files, so the old
+  copy in `~/.cursor/rules/` doesn't load the orchestration rule. Install and uninstall move the
+  old user-scope files into a backup folder, but only files that match what an earlier installer
+  wrote. `--project` still writes `.cursor/`.
+- `install.ps1` leaves the bash hooks off on Windows, where Cursor runs hooks through PowerShell.
+- The repository is a Cursor Plugin: `.cursor-plugin/plugin.json` and `hooks/hooks.json` are new,
+  and the unused root `plugin.json` is gone.
+- Agent names are their file names (`aang`, `toph`, and so on). Cursor uses the name as the
+  agent's identifier and asks for lowercase letters and hyphens.
+- Sokka and Iroh run `claude-opus-5-5-high` instead of the hidden Opus 4.8. Zuko runs
+  `gemini-4-argon`.
+- `guard-shell.sh` prints only `permission`, `user_message`, and `agent_message`, and escapes its
+  messages. Cursor blocks a command when a permission hook prints invalid JSON or a reply that
+  doesn't match the hook's schema.
+- `post-edit-lint.sh` lints from the workspace root that Cursor passes in `CURSOR_PROJECT_DIR`.
+- Two vendored skills have names that match their folders.
+
+### Added
+
+- `scripts/test-cursor-hooks.sh` checks the shell guard's replies against Cursor's hook schema.
+- `scripts/test-install-sh.sh` and `scripts/test-install-ps1.ps1` run each installer against
+  throwaway home folders.
+- `.github/workflows/validate-cursor-edition.yml` runs the three suites on Linux when the Cursor
+  edition changes.
+- The installers warn when the Claude Code edition of Team Avatar is installed too. Cursor loads it
+  as well, and its agents take over the shared names.
+
+### Fixed
+
+- Both installers install all 21 bundled skills. Their skill lists left out
+  `crafting-effective-readmes`.
+- `install.ps1` uses a local checkout on Windows PowerShell 5.1. Its three-argument `Join-Path`
+  calls failed there, so it downloaded `main` instead.
+- `guard-shell.sh` checks commits in the workspace root. A plugin hook starts in the plugin's
+  folder, and Cursor 3.27 sends an empty `cwd` when the shell call names no directory, so the
+  anti-pattern check looked at the wrong folder and let an `as any` commit through.
+- `guard-shell.sh` blocks a command that stages files and commits in one go, because the
+  anti-pattern check reads only what is staged before the command runs.
+- The installers no longer call `~/.agents/skills/` a legacy folder that is safe to delete. Cursor
+  and other tools load user skills from it, so the note now names the skills that share a bundled
+  name instead.
 
 ## [1.0.0] - 2026-10-24
 
