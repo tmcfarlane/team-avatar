@@ -12,7 +12,7 @@ The ground rules are the same everywhere. Read before you claim. Name the data s
 | Aang | Orchestration, history, and the final call | `avatar-mode`, `four-elements`, `past-lives`, `spirit-world`, `iceberg-wake`, `meditation`, `avatar-setup`, `avatar-help` |
 | Sokka | Planning, architecture, and inventions | `master-plan`, `war-room`, `day-of-black-sun`, `battle-map`, `war-journal`, `invention-workshop`, `sharpen-the-sword` |
 | Toph | Investigation and blunt review | `seismic-sense`, `earth-rumble`, `metalbending`, `lie-detector`, `my-cabbages`, `plain-talk` |
-| Katara | Debugging, tests, and code health | `healing-water`, `push-and-pull`, `heal-ci`, `purify`, `clear-water`, `vital-signs`, `checkup`, `typescript-forms` |
+| Katara | Debugging, tests, and code health | `healing-water`, `agent-qa`, `push-and-pull`, `heal-ci`, `purify`, `clear-water`, `vital-signs`, `checkup`, `typescript-forms` |
 | Zuko | Performance, forensics, and incidents | `breath-of-fire`, `steady-flame`, `dragon-dance`, `ember-trace`, `twin-flames`, `agni-kai`, `redemption-arc`, `honor-code` |
 | Iroh | Writing, teaching, and skill craft | `tea-time`, `white-lotus`, `what-you-seek`, `new-scroll`, `pai-sho` |
 | Appa | Execution, shipping, and PR care | `steady-flight`, `yip-yip`, `light-load`, `long-flight`, `safe-landing`, `clear-skies`, `messenger-hawk`, `make-camp`, `break-camp`, `shedding-season` |
